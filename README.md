@@ -77,6 +77,7 @@ npm run build-exe    # 生成 ../dist/PersonalNotes.exe
 - better-sqlite3 为原生模块：运行时自动把内置的 `win32-x64.node` 释放到临时目录后加载（`db/init.js` 中处理）
 - 内置窗口使用 `@webviewjs/webview`（Rust 实现，基于系统 WebView2）：其原生 `.node` 与 better-sqlite3 一样，打包后由 `start-app.js` 在启动时释放到临时目录并通过 `NAPI_RS_NATIVE_LIBRARY_PATH` 加载
 - 后端（Express + SQLite）运行在 worker 线程中，主线程负责窗口；关闭窗口会自动终止后端并退出
+- **EXE 图标**：构建前会把 `assets/icon.ico` 注入 pkg 的 base binary（普通 node.exe），再基于它打包，因此生成的 EXE 自带书本图标（`build-base-icon.js` 负责注入，幂等安全）
 
 ---
 

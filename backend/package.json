@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build-exe": "pkg start-app.js --targets node24-win-x64 --output ../dist/PersonalNotes.exe"
+    "build-exe": "node build-base-icon.js && set PKG_NODE_PATH=%USERPROFILE%\\.pkg-cache\\v3.6\\fetched-v24.18.1-win-x64&& pkg start-app.js --targets node24-win-x64 --output ../dist/PersonalNotes.exe"
   },
   "keywords": [
     "notes",
@@ -22,15 +22,19 @@
     "express": "^4.19.2"
   },
   "devDependencies": {
-    "@yao-pkg/pkg": "^6.22.0"
+    "@yao-pkg/pkg": "^6.22.0",
+    "rcedit": "^5.0.1"
   },
   "pkg": {
     "assets": [
       ".env",
       "node_modules/better-sqlite3/prebuilds/win32-x64.node",
       "node_modules/@webviewjs/webview-win32-x64-msvc/webview.win32-x64-msvc.node",
-      "../frontend/**/*"
+      "../frontend/**/*",
+      "assets/icon.ico"
     ],
-    "scripts": ["./server.js"]
+    "scripts": [
+      "./server.js"
+    ]
   }
 }

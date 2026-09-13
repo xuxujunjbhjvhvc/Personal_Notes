@@ -42,5 +42,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Personal Notes 服务已启动: http://localhost:${PORT}`);
-  console.log(`前端页面: http://localhost:${PORT}/login.html`);
+  console.log(`前端页面: http://localhost:${PORT}/index.html`);
 });

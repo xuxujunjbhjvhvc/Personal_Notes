@@ -85,6 +85,18 @@ function findFreePort(start) {
 
   await waitServer();
 
+  // ---- 窗口图标：pkg 环境下复制到真实磁盘（wry 需要真实文件路径）----
+  const iconSrc = path.join(__dirname, 'assets', 'icon.ico');
+  let winIconPath = null;
+  if (fs.existsSync(iconSrc)) {
+    if (process.pkg) {
+      winIconPath = path.join(os.tmpdir(), `pn_icon_${process.pid}.ico`);
+      fs.copyFileSync(iconSrc, winIconPath);
+    } else {
+      winIconPath = iconSrc;
+    }
+  }
+
   const app = new Application();
   const win = app.createBrowserWindow({
     title: '个人笔记',
@@ -92,6 +104,13 @@ function findFreePort(start) {
     height: 720,
     resizable: true,
   });
+  if (winIconPath) {
+    try {
+      win.setWindowIcon(winIconPath, 32, 32);
+    } catch (e) {
+      console.warn('[app] 设置窗口图标失败:', e.message);
+    }
+  }
   const webview = win.createWebview({ url: `http://127.0.0.1:${PORT}/index.html` });
 
   console.log(`[app] 服务地址: http://127.0.0.1:${PORT}`);
