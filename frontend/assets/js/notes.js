@@ -3,6 +3,44 @@
 // =========================================================
 
 (function () {
+  // 支持的字体（key 与后端白名单一致；均为系统自带免费字体，无需联网加载）
+  const FONT_OPTIONS = [
+    { key: 'default', label: '默认', family: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif' },
+    { key: 'song', label: '宋体', family: 'Georgia, "Songti SC", SimSun, serif' },
+    { key: 'kai', label: '楷体', family: '"KaiTi", "Kaiti SC", STKaiti, serif' },
+    { key: 'hei', label: '黑体', family: 'SimHei, "Heiti SC", "Microsoft YaHei", sans-serif' },
+    { key: 'yuan', label: '幼圆', family: '"YouYuan", "Yuanti SC", "Microsoft YaHei", sans-serif' },
+    { key: 'fang', label: '仿宋', family: '"FangSong", STFangsong, serif' },
+  ];
+
+  // 预设纸感色板（浅色系，适配文字可读性）
+  const COLOR_OPTIONS = [
+    { value: '', label: '默认', bg: '#fffdf8' },
+    { value: '#fdf6e3', label: '奶油', bg: '#fdf6e3' },
+    { value: '#f1f5e4', label: '淡绿', bg: '#f1f5e4' },
+    { value: '#e7f2f0', label: '浅青', bg: '#e7f2f0' },
+    { value: '#eef1f8', label: '淡蓝', bg: '#eef1f8' },
+    { value: '#f5eff6', label: '淡紫', bg: '#f5eff6' },
+    { value: '#fdf0ee', label: '樱粉', bg: '#fdf0ee' },
+    { value: '#f5f0e6', label: '暖灰', bg: '#f5f0e6' },
+  ];
+
+  function fontFamilyOf(key) {
+    const f = FONT_OPTIONS.find((o) => o.key === key);
+    return f ? f.family : FONT_OPTIONS[0].family;
+  }
+
+  // 判断背景色明暗，用于自动选择深/浅文字色
+  function isLightColor(hex) {
+    if (!hex) return true;
+    const h = hex.replace('#', '');
+    const full = h.length === 3 ? h.split('').map((x) => x + x).join('') : h;
+    const r = parseInt(full.slice(0, 2), 16);
+    const g = parseInt(full.slice(2, 4), 16);
+    const b = parseInt(full.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
+  }
+
   // ---------- 编辑器页 ----------
   const noteForm = document.getElementById('noteForm');
   if (noteForm) {
@@ -26,6 +64,71 @@
     const tagsInput = document.getElementById('noteTags');
     const deleteBtn = document.getElementById('deleteBtn');
     const hint = document.getElementById('editorHint');
+    const fontSelect = document.getElementById('noteFont');
+    const paletteEl = document.getElementById('colorPalette');
+    const colorCustom = document.getElementById('colorCustom');
+
+    // 样式状态
+    let selectedColor = '';
+    let selectedFontKey = 'default';
+
+    // 填充字体下拉（选项文字用对应字体显示，所见即所得）
+    FONT_OPTIONS.forEach((f) => {
+      const opt = document.createElement('option');
+      opt.value = f.key;
+      opt.textContent = f.label;
+      opt.style.fontFamily = f.family;
+      fontSelect.appendChild(opt);
+    });
+
+    // 渲染色板
+    function syncPalette() {
+      paletteEl.querySelectorAll('.color-swatch').forEach((el, i) => {
+        el.classList.toggle('active', COLOR_OPTIONS[i].value === selectedColor);
+      });
+    }
+
+    COLOR_OPTIONS.forEach((opt) => {
+      const sw = document.createElement('button');
+      sw.type = 'button';
+      sw.className = 'color-swatch' + (opt.value === selectedColor ? ' active' : '');
+      sw.style.background = opt.bg;
+      sw.title = opt.label;
+      sw.addEventListener('click', () => {
+        selectedColor = opt.value;
+        syncPalette();
+        applyStylePreview();
+      });
+      paletteEl.appendChild(sw);
+    });
+
+    colorCustom.addEventListener('input', () => {
+      selectedColor = colorCustom.value;
+      syncPalette();
+      applyStylePreview();
+    });
+
+    fontSelect.addEventListener('change', () => {
+      selectedFontKey = fontSelect.value;
+      applyStylePreview();
+    });
+
+    // 实时预览所选字体与颜色
+    function applyStylePreview() {
+      const wrap = document.querySelector('.editor-wrap');
+      const family = fontFamilyOf(selectedFontKey);
+      const light = isLightColor(selectedColor);
+      const ink = light ? '#38342c' : '#fffdf8';
+      const soft = light ? '#8a8375' : 'rgba(255,253,248,0.78)';
+
+      wrap.style.background = selectedColor || '';
+      wrap.style.color = ink;
+      titleInput.style.color = ink;
+      titleInput.style.fontFamily = family;
+      contentInput.style.color = ink;
+      contentInput.style.fontFamily = family;
+      tagsInput.style.color = soft;
+    }
 
     // 从 URL 读取笔记 id（存在即为编辑模式）
     const params = new URLSearchParams(location.search);
@@ -40,6 +143,14 @@
         tagsInput.value = (note.tags || []).map((t) => t.name).join(', ');
         deleteBtn.classList.remove('hidden');
         hint.textContent = '编辑模式';
+
+        // 应用已保存的颜色与字体
+        selectedColor = note.color || '';
+        selectedFontKey = note.font_key || 'default';
+        fontSelect.value = selectedFontKey;
+        if (selectedColor) colorCustom.value = selectedColor;
+        syncPalette();
+        applyStylePreview();
       } catch (err) {
         if (err.status === 401) return redirectToLogin();
         showToast(err.message);
@@ -47,6 +158,7 @@
       }
     } else {
       hint.textContent = '新建模式';
+      applyStylePreview();
     }
 
     noteForm.addEventListener('submit', async (e) => {
@@ -54,6 +166,8 @@
       const payload = {
         title: titleInput.value.trim(),
         content: contentInput.value,
+        color: selectedColor || null,
+        fontKey: selectedFontKey,
         tags: tagsInput.value
           .split(/[,，]/)
           .map((t) => t.trim())
@@ -149,6 +263,21 @@
             <button class="btn btn-small btn-danger" data-action="delete">删除</button>
           </div>
         `;
+
+        // 应用笔记自定义颜色（自动适配深/浅文字色）
+        if (note.color) {
+          const light = isLightColor(note.color);
+          card.style.setProperty('--card-bg', note.color);
+          card.style.setProperty('--card-ink', light ? '#38342c' : '#fffdf8');
+          card.style.setProperty('--card-ink-soft', light ? '#8a8375' : 'rgba(255,253,248,0.78)');
+        }
+
+        // 应用笔记自定义字体
+        const fk = note.font_key || 'default';
+        if (fk !== 'default') {
+          card.style.fontFamily = fontFamilyOf(fk);
+          card.querySelector('.note-card-title').style.fontFamily = fontFamilyOf(fk);
+        }
 
         // 点击卡片主体进入编辑
         card.addEventListener('click', (e) => {

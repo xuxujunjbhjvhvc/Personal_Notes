@@ -1,6 +1,22 @@
 const db = require('../db/init');
 const { ok, fail } = require('../utils/helper');
 
+// 支持的字体（key 与前端保持一致）
+const FONT_KEYS = ['default', 'song', 'kai', 'hei', 'yuan', 'fang'];
+
+// 规范化颜色：只接受空值或合法 hex，非法回退 null（默认）
+function normalizeColor(v) {
+  const s = String(v ?? '').trim();
+  if (!s) return null;
+  return /^#[0-9a-fA-F]{6}$/.test(s) || /^#[0-9a-fA-F]{3}$/.test(s) ? s : null;
+}
+
+// 规范化字体 key：不在白名单则回退 default
+function normalizeFontKey(v) {
+  const s = String(v ?? '').trim().toLowerCase();
+  return FONT_KEYS.includes(s) ? s : 'default';
+}
+
 // 查询某条笔记关联的标签
 function getNoteTags(noteId) {
   return db
@@ -85,7 +101,7 @@ function getNote(req, res) {
 
 // 新建笔记
 function createNote(req, res) {
-  const { title = '', content = '', tags = [] } = req.body || {};
+  const { title = '', content = '', tags = [], color, fontKey } = req.body || {};
   const t = String(title).trim();
   const c = String(content ?? '');
 
@@ -94,8 +110,8 @@ function createNote(req, res) {
   }
 
   const info = db
-    .prepare('INSERT INTO notes (user_id, title, content) VALUES (?, ?, ?)')
-    .run(req.user.id, t, c);
+    .prepare('INSERT INTO notes (user_id, title, content, color, font_key) VALUES (?, ?, ?, ?, ?)')
+    .run(req.user.id, t, c, normalizeColor(color), normalizeFontKey(fontKey));
   const noteId = info.lastInsertRowid;
 
   attachTags(req.user.id, noteId, tags);
@@ -107,15 +123,17 @@ function updateNote(req, res) {
   const note = fetchNote(req.user.id, req.params.id);
   if (!note) return fail(res, 404, '笔记不存在');
 
-  const { title, content, tags } = req.body || {};
+  const { title, content, tags, color, fontKey } = req.body || {};
   const t = title === undefined ? note.title : String(title).trim();
   const c = content === undefined ? note.content : String(content ?? '');
+  const cl = color === undefined ? note.color : normalizeColor(color);
+  const fk = fontKey === undefined ? note.font_key : normalizeFontKey(fontKey);
 
   db.prepare(
     `UPDATE notes
-     SET title = ?, content = ?, updated_at = datetime('now', 'localtime')
+     SET title = ?, content = ?, color = ?, font_key = ?, updated_at = datetime('now', 'localtime')
      WHERE id = ?`
-  ).run(t, c, note.id);
+  ).run(t, c, cl, fk, note.id);
 
   if (tags !== undefined) {
     db.prepare('DELETE FROM note_tags WHERE note_id = ?').run(note.id);

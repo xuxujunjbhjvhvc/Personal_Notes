@@ -23,6 +23,19 @@
         <input id="noteTags" type="text" maxlength="100"
                placeholder="标签，多个用英文逗号分隔，例如：灵感,工作" autocomplete="off" />
       </div>
+      <div class="editor-style">
+        <div class="style-field">
+          <span class="style-label">字体</span>
+          <select id="noteFont" class="style-select"></select>
+        </div>
+        <div class="style-field">
+          <span class="style-label">颜色</span>
+          <div id="colorPalette" class="color-palette"></div>
+          <label class="color-custom" title="自定义颜色">
+            <input type="color" id="colorCustom" value="#fffdf8" />
+          </label>
+        </div>
+      </div>
       <div class="editor-actions">
         <span id="editorHint" class="editor-hint"></span>
         <button id="deleteBtn" type="button" class="btn btn-danger hidden">删除</button>

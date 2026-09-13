@@ -16,9 +16,10 @@
 
 - 用户注册 / 登录（JWT 鉴权）
 - 笔记新增、查看、编辑、删除（CRUD）
-- 标签：创建标签、按标签筛选笔记、删除标签
+- 标签：创建标签、按标签筛选笔记、重命名标签、删除标签
 - 搜索：按标题 / 内容关键词搜索
 - 标签自动挂载：编辑笔记时填入标签名会自动创建
+- 笔记样式自定义：预设纸感色板 + 自定义取色器设置背景色，6 款系统免费字体（宋体 / 楷体 / 黑体 / 幼圆 / 仿宋）
 
 ## 目录结构
 
@@ -98,7 +99,7 @@ http://localhost:3000/login.html
 | GET | /api/auth/me | 获取当前用户信息 | 是 |
 | GET | /api/notes | 笔记列表，支持 `?tag=标签名` 与 `?keyword=关键词` | 是 |
 | GET | /api/notes/:id | 单条笔记 | 是 |
-| POST | /api/notes | 新建笔记 `{ title, content, tags: [] }` | 是 |
+| POST | /api/notes | 新建笔记 `{ title, content, tags: [], color, fontKey }`（color 为 hex 背景色，fontKey 可选 default/song/kai/hei/yuan/fang） | 是 |
 | PUT | /api/notes/:id | 更新笔记（字段缺省保留原值） | 是 |
 | DELETE | /api/notes/:id | 删除笔记 | 是 |
 | GET | /api/tags | 标签列表（含笔记数） | 是 |

@@ -25,6 +25,8 @@ db.exec(`
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title      TEXT    NOT NULL DEFAULT '',
     content    TEXT    NOT NULL DEFAULT '',
+    color      TEXT,
+    font_key   TEXT    NOT NULL DEFAULT 'default',
     created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
     updated_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
   );
@@ -50,5 +52,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_note_tags_note   ON note_tags(note_id);
   CREATE INDEX IF NOT EXISTS idx_note_tags_tag    ON note_tags(tag_id);
 `);
+
+// 兼容旧数据库：已存在的 notes 表自动补充新列
+function ensureColumn(table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    console.log(`[db] notes 表已补充字段: ${column}`);
+  }
+}
+ensureColumn('notes', 'color', 'TEXT');
+ensureColumn('notes', 'font_key', "TEXT NOT NULL DEFAULT 'default'");
 
 module.exports = db;
