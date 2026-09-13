@@ -162,3 +162,91 @@ function formatTime(str) {
   const m = String(str).match(/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2})/);
   return m ? m[1] : String(str).slice(0, 16);
 }
+
+// =========================================================
+// 笔记风格弹窗（替代浏览器默认 alert/confirm/prompt）
+// openDialog 返回 Promise：
+//   - 输入模式 resolve 输入值；取消 resolve null
+//   - 确认模式 resolve true / null
+// =========================================================
+function openDialog({ title, message, value = '', confirmText = '确定', cancelText = '取消', showInput = false }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'dialog-overlay';
+    overlay.innerHTML = `
+      <div class="dialog" role="dialog" aria-modal="true">
+        <div class="dialog-title">${esc(title)}</div>
+        ${message ? `<div class="dialog-message">${esc(message)}</div>` : ''}
+        ${showInput ? `<input type="text" class="dialog-input" value="${esc(value)}" maxlength="20" />` : ''}
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-ghost" data-dialog="cancel">${esc(cancelText)}</button>
+          <button type="button" class="btn btn-primary" data-dialog="confirm">${esc(confirmText)}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector('.dialog-input');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+
+    let onKey;
+    function close(result) {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(result);
+    }
+
+    // 点击遮罩或按 Esc 取消
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close(null);
+    });
+
+    overlay.querySelector('[data-dialog="cancel"]').addEventListener('click', () => close(null));
+    overlay.querySelector('[data-dialog="confirm"]').addEventListener('click', () => {
+      close(input ? input.value : true);
+    });
+
+    onKey = (e) => {
+      if (e.key === 'Enter' && input) {
+        e.preventDefault();
+        close(input.value);
+      } else if (e.key === 'Escape') {
+        close(null);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+  });
+}
+
+// 确认框（返回 Promise<boolean>）
+function showConfirm(message, title = '确认操作', confirmText = '确定') {
+  return openDialog({ title, message, confirmText, cancelText: '取消' });
+}
+
+// 输入框（返回 Promise<string|null>，取消为 null）
+function showPrompt(title, value = '', confirmText = '确定') {
+  return openDialog({ title, value, confirmText, cancelText: '取消', showInput: true });
+}
+
+// =========================================================
+// 夜间模式：localStorage 记忆偏好，右下角按钮切换
+// =========================================================
+function initThemeToggle() {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+
+  const saved = localStorage.getItem('pn_theme');
+  if (saved === 'dark') {
+    document.body.classList.add('dark');
+  }
+
+  btn.addEventListener('click', () => {
+    const dark = document.body.classList.toggle('dark');
+    localStorage.setItem('pn_theme', dark ? 'dark' : 'light');
+  });
+}
+
+initThemeToggle();

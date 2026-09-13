@@ -117,9 +117,14 @@
     function applyStylePreview() {
       const wrap = document.querySelector('.editor-wrap');
       const family = fontFamilyOf(selectedFontKey);
-      const light = isLightColor(selectedColor);
-      const ink = light ? '#38342c' : '#fffdf8';
-      const soft = light ? '#8a8375' : 'rgba(255,253,248,0.78)';
+      const darkMode = document.body.classList.contains('dark');
+      // 已选颜色按背景明暗适配；未选颜色跟随当前主题
+      const ink = selectedColor
+        ? (isLightColor(selectedColor) ? '#38342c' : '#fffdf8')
+        : (darkMode ? '#e8e2d6' : '#38342c');
+      const soft = selectedColor
+        ? (isLightColor(selectedColor) ? '#8a8375' : 'rgba(255,253,248,0.78)')
+        : (darkMode ? '#a89f8e' : '#8a8375');
 
       wrap.style.background = selectedColor || '';
       wrap.style.color = ink;
@@ -197,7 +202,8 @@
 
     deleteBtn.addEventListener('click', async () => {
       if (!note) return;
-      if (!window.confirm('确定删除这条笔记吗？')) return;
+      const ok = await showConfirm('确定删除这条笔记吗？删除后无法恢复。', '删除笔记', '删除');
+      if (!ok) return;
       try {
         await API.deleteNote(note.id);
         showToast('已删除', 'success');
@@ -291,7 +297,8 @@
 
         card.querySelector('[data-action="delete"]').addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (!window.confirm('确定删除这条笔记吗？')) return;
+          const ok = await showConfirm('确定删除这条笔记吗？删除后无法恢复。', '删除笔记', '删除');
+          if (!ok) return;
           try {
             await API.deleteNote(note.id);
             showToast('已删除', 'success');
@@ -348,8 +355,12 @@
         renameBtn.textContent = '✎';
         renameBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          const newName = window.prompt('重命名标签', tag.name);
-          if (!newName || newName.trim() === tag.name) return;
+          const newName = await showPrompt('重命名标签', tag.name, '保存');
+          if (newName === null || newName.trim() === tag.name) return;
+          if (!newName.trim()) {
+            showToast('标签名不能为空');
+            return;
+          }
           try {
             await API.updateTag(tag.id, newName.trim());
             showToast('标签已重命名', 'success');
@@ -369,7 +380,12 @@
         delBtn.textContent = '✕';
         delBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (!window.confirm(`确定删除标签「${tag.name}」吗？该标签会从所有笔记中移除。`)) return;
+          const ok = await showConfirm(
+            `确定删除标签「${tag.name}」吗？该标签会从所有笔记中移除。`,
+            '删除标签',
+            '删除'
+          );
+          if (!ok) return;
           try {
             await API.deleteTag(tag.id);
             showToast('标签已删除', 'success');
