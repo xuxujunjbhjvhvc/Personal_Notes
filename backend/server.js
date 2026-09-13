@@ -1,5 +1,6 @@
-require('dotenv').config();
 const path = require('path');
+// 加载环境变量：开发时读取 backend/.env；打包后从 exe 内置的虚拟文件系统读取
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 

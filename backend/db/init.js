@@ -1,9 +1,29 @@
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const Database = require('better-sqlite3');
 
 // 默认使用 backend/db/database.db，可用环境变量 DB_PATH 覆盖（便于测试/部署时指定路径）
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'database.db');
-const db = new Database(DB_PATH);
+
+// pkg 打包后原生模块无法从虚拟文件系统直接 dlopen：
+// 把 .node 复制到真实磁盘（临时目录），并通过 nativeBinding 选项交给 better-sqlite3 加载
+let nativeBinding;
+if (process.pkg) {
+  const src = path.join(
+    __dirname,
+    '..',
+    'node_modules',
+    'better-sqlite3',
+    'prebuilds',
+    'win32-x64.node'
+  );
+  const dest = path.join(os.tmpdir(), `better_sqlite3_${process.pid}.node`);
+  fs.copyFileSync(src, dest);
+  nativeBinding = dest;
+}
+
+const db = nativeBinding ? new Database(DB_PATH, { nativeBinding }) : new Database(DB_PATH);
 
 // 开启 WAL 提升并发读写性能
 db.pragma('journal_mode = WAL');

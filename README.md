@@ -47,6 +47,36 @@
 
 ---
 
+## 桌面离线版（Windows EXE）
+
+> 本分支（`desktop-exe`）提供将整套应用打包为单个 Windows EXE 的能力：**无需安装 Node.js，双击即用**，前后端与 SQLite 全部内置。
+
+### 使用方式
+
+1. 双击 `dist/PersonalNotes.exe`（或自行打包，见下）
+2. 程序自动启动本地服务并打开默认浏览器进入登录页
+3. 首次使用在登录页注册账号即可
+4. 数据保存在 **exe 同目录 `db/database.db`**（退出程序、重启电脑数据不丢失）
+
+> 端口被占用时程序会自动顺延（3000 → 3001 → …），不影响使用。
+
+### 重新打包 EXE
+
+```bash
+cd backend
+npm install          # 安装依赖（含打包工具 @yao-pkg/pkg）
+npm run build-exe    # 生成 ../dist/PersonalNotes.exe
+```
+
+打包说明：
+- 打包工具：`@yao-pkg/pkg`（社区维护版，支持 Node 24）
+- 首次构建会自动下载 Node 运行时（约 90MB，缓存于 `~/.pkg-cache`）；若下载失败，可手动下载
+  `https://github.com/yao-pkg/pkg-fetch/releases/download/v3.6/node-v24.18.1-win-x64`
+  并重命名为 `fetched-v24.18.1-win-x64` 放入 `~/.pkg-cache/v3.6/`
+- better-sqlite3 为原生模块：运行时自动把内置的 `win32-x64.node` 释放到临时目录后加载（`db/init.js` 中处理）
+
+---
+
 ## 快速开始
 
 ### 环境要求
