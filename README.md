@@ -1,17 +1,16 @@
 # Personal Notes 个人笔记系统
 
-一个轻量、开箱即用的个人笔记应用：支持用户登录、笔记管理、标签体系、关键词搜索，以及笔记颜色与字体自定义。前后端同源部署，一条命令即可启动，数据保存在本地 SQLite 单文件中。
+一个轻量、开箱即用的个人笔记应用：笔记管理、标签体系、关键词搜索，以及笔记颜色与字体自定义。前后端同源部署，一条命令即可启动，数据保存在本地 SQLite 单文件中。
 
 - 前端：原生 HTML / CSS / JavaScript，零框架、零构建步骤
 - 后端：Node.js + Express，RESTful API
 - 数据库：SQLite（better-sqlite3），无需安装数据库服务
 
+> 桌面离线版（`desktop-exe` 分支）为**单用户离线使用，无需注册登录**，双击 EXE 即用，详见下方「桌面离线版」。
+
 ---
 
 ## 功能特性
-
-**账号体系**
-- 用户注册 / 登录（JWT 鉴权，密码 bcrypt 哈希存储）
 
 **笔记管理**
 - 笔记新增、查看、编辑、删除（完整 CRUD）
@@ -31,7 +30,7 @@
 - 编辑器实时预览所选字体与颜色
 
 **其他**
-- 旧数据库自动迁移：升级时自动补充新字段，无需手动操作
+- 桌面版单用户离线：无需注册登录，数据保存在本地
 - 前端零外部依赖，离线可用
 
 ---
@@ -43,7 +42,6 @@
 | 前端 | 原生 HTML + CSS + JavaScript（无框架、无构建步骤） |
 | 后端 | Node.js + Express 4 |
 | 数据库 | SQLite（better-sqlite3 v13，NAPI 跨 Node 版本通用） |
-| 鉴权 | JWT（jsonwebtoken）+ 密码哈希（bcryptjs） |
 
 ---
 
@@ -54,8 +52,8 @@
 ### 使用方式
 
 1. 双击 `dist/PersonalNotes.exe`（或自行打包，见下）
-2. 程序自动启动本地服务并打开默认浏览器进入登录页
-3. 首次使用在登录页注册账号即可
+2. 程序自动启动本地服务并打开默认浏览器进入笔记列表页
+3. **无需注册登录**，直接开始记笔记
 4. 数据保存在 **exe 同目录 `db/database.db`**（退出程序、重启电脑数据不丢失）
 
 > 端口被占用时程序会自动顺延（3000 → 3001 → …），不影响使用。
@@ -114,8 +112,6 @@ Personal Notes 服务已启动: http://localhost:3000
 
 ```env
 PORT=3000                    # 服务端口
-JWT_SECRET=change_me...      # JWT 签名密钥（部署前务必改为长随机字符串）
-TOKEN_EXPIRES_IN=7d          # Token 有效期
 ```
 
 ---
@@ -151,32 +147,27 @@ Personal_Notes/
 │   ├── .env                  # 环境变量（不入库）
 │   ├── .env.example          # 环境变量示例
 │   ├── server.js             # 服务入口（API + 托管前端静态文件）
+│   ├── start-app.js          # 桌面版入口（EXE 双击启动 + 自动开浏览器）
 │   ├── db/
-│   │   ├── init.js           # 建表初始化 + 旧库自动迁移
+│   │   ├── init.js           # 建表初始化
 │   │   └── database.db       # SQLite 数据文件（首次启动自动生成）
 │   ├── routes/               # 路由定义
-│   │   ├── auth.js           # 认证路由
 │   │   ├── notes.js          # 笔记路由
 │   │   └── tags.js           # 标签路由
 │   ├── controllers/          # 业务逻辑
-│   │   ├── authController.js
 │   │   ├── notesController.js
 │   │   └── tagsController.js
-│   ├── middleware/
-│   │   └── auth.js           # JWT 校验中间件
 │   └── utils/
 │       └── helper.js         # 统一响应格式
 ├── frontend/                 # 前端静态页面（由后端同源托管）
 │   ├── index.html            # 笔记列表页
-│   ├── login.html            # 登录页
-│   ├── register.html         # 注册页
 │   ├── note-editor.html      # 新增 / 编辑笔记页
 │   └── assets/
 │       ├── css/style.css     # 全局样式（书卷暖纸风格）
 │       └── js/
-│           ├── api.js        # 请求封装与鉴权处理
-│           ├── auth.js       # 登录注册逻辑
+│           ├── api.js        # 请求封装
 │           └── notes.js      # 列表页与编辑器逻辑
+├── dist/                     # 打包产物（EXE，不入库）
 ├── README.md
 └── .gitignore
 ```
@@ -188,26 +179,22 @@ Personal_Notes/
 ### 统一约定
 
 - 所有接口返回 `{ code, message, data }`，`code = 0` 表示成功
-- 需鉴权的接口在请求头携带 `Authorization: Bearer <token>`
-- 除注册 / 登录外，所有接口均需登录
+- 桌面离线版为单用户，所有接口**无需鉴权**，直接调用
 
 ### 接口一览
 
-| 方法 | 路径 | 说明 | 鉴权 |
-| --- | --- | --- | --- |
-| POST | `/api/auth/register` | 注册 `{ username, password }`，返回 token | 否 |
-| POST | `/api/auth/login` | 登录 `{ username, password }`，返回 token | 否 |
-| GET | `/api/auth/me` | 获取当前用户信息 | 是 |
-| GET | `/api/notes` | 笔记列表，支持 `?tag=标签名`、`?keyword=关键词` | 是 |
-| GET | `/api/notes/:id` | 单条笔记（含标签、颜色、字体） | 是 |
-| POST | `/api/notes` | 新建笔记 | 是 |
-| PUT | `/api/notes/:id` | 更新笔记（字段缺省保留原值） | 是 |
-| DELETE | `/api/notes/:id` | 删除笔记 | 是 |
-| GET | `/api/tags` | 标签列表（含各标签笔记数） | 是 |
-| POST | `/api/tags` | 新建标签 `{ name }` | 是 |
-| PUT | `/api/tags/:id` | 重命名标签 `{ name }`（自动同步到所有笔记） | 是 |
-| DELETE | `/api/tags/:id` | 删除标签（自动解除与笔记的关联） | 是 |
-| GET | `/api/health` | 健康检查 | 否 |
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/notes` | 笔记列表，支持 `?tag=标签名`、`?keyword=关键词` |
+| GET | `/api/notes/:id` | 单条笔记（含标签、颜色、字体） |
+| POST | `/api/notes` | 新建笔记 |
+| PUT | `/api/notes/:id` | 更新笔记（字段缺省保留原值） |
+| DELETE | `/api/notes/:id` | 删除笔记 |
+| GET | `/api/tags` | 标签列表（含各标签笔记数） |
+| POST | `/api/tags` | 新建标签 `{ name }` |
+| PUT | `/api/tags/:id` | 重命名标签 `{ name }`（自动同步到所有笔记） |
+| DELETE | `/api/tags/:id` | 删除标签（自动解除与笔记的关联） |
+| GET | `/api/health` | 健康检查 |
 
 ### 笔记字段说明
 
@@ -222,25 +209,13 @@ Personal_Notes/
 ### 请求示例
 
 ```bash
-# 注册
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"me","password":"123456"}'
-
-# 登录获取 token
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"me","password":"123456"}'
-
 # 新建带样式与标签的笔记
 curl -X POST http://localhost:3000/api/notes \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
   -d '{"title":"第一篇","content":"你好","tags":["灵感"],"color":"#fdf6e3","fontKey":"kai"}'
 
 # 按标签筛选
-curl "http://localhost:3000/api/notes?tag=灵感" \
-  -H "Authorization: Bearer <token>"
+curl "http://localhost:3000/api/notes?tag=灵感"
 ```
 
 ---
@@ -249,9 +224,8 @@ curl "http://localhost:3000/api/notes?tag=灵感" \
 
 | 表 | 说明 |
 | --- | --- |
-| `users` | 用户（用户名唯一，密码存 bcrypt 哈希） |
 | `notes` | 笔记（标题、内容、背景色 `color`、字体 `font_key`、时间戳） |
-| `tags` | 标签（同一用户下标签名唯一） |
+| `tags` | 标签（名称唯一） |
 | `note_tags` | 笔记-标签多对多关联表（级联删除） |
 
 > 版本升级时会自动为旧库补充新字段（`ensureColumn` 迁移逻辑），无需手工操作数据库。
@@ -269,8 +243,8 @@ npm config set registry https://registry.npmmirror.com
 **端口被占用**
 修改 `backend/.env` 中的 `PORT` 后重启，访问地址同步变更。
 
-**忘记密码**
-目前无找回功能。可删除 `backend/db/database.db` 后重启服务重建（会清空所有数据）。
+**数据重置**
+想清空所有数据：删除数据库文件后重启即可（默认 `backend/db/database.db`，EXE 版为程序同目录 `db/database.db`，会清空全部笔记）。
 
 **页面样式没有更新**
 浏览器缓存导致，使用 `Ctrl + F5` 强制刷新。
@@ -289,9 +263,9 @@ npm config set registry https://registry.npmmirror.com
 
 ## 安全提醒
 
-- 部署前务必修改 `backend/.env` 中的 `JWT_SECRET` 为长随机字符串
 - `.env` 与 `database.db` 已加入 `.gitignore`，请勿提交到版本库
-- 本项目定位为个人使用 / 学习项目，对外提供生产服务还需补充：HTTPS、速率限制、密码找回、内容审核等
+- 本项目定位为个人使用 / 学习项目，对外提供生产服务还需补充：HTTPS、速率限制、内容审核等
+- 桌面离线版数据保存在本机，请勿将包含隐私数据的 `database.db` 直接分享给他人
 
 ---
 

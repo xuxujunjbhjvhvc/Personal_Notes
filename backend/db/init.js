@@ -31,18 +31,9 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
 db.exec(`
-  -- 用户表
-  CREATE TABLE IF NOT EXISTS users (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    username      TEXT    NOT NULL UNIQUE,
-    password_hash TEXT    NOT NULL,
-    created_at    TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
-  );
-
-  -- 笔记表
+  -- 笔记表（桌面离线版：单用户，无 user_id）
   CREATE TABLE IF NOT EXISTS notes (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title      TEXT    NOT NULL DEFAULT '',
     content    TEXT    NOT NULL DEFAULT '',
     color      TEXT,
@@ -51,12 +42,10 @@ db.exec(`
     updated_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
   );
 
-  -- 标签表（每个用户的标签名唯一）
+  -- 标签表（标签名唯一）
   CREATE TABLE IF NOT EXISTS tags (
-    id      INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name    TEXT    NOT NULL,
-    UNIQUE (user_id, name)
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT    NOT NULL UNIQUE
   );
 
   -- 笔记-标签 多对多关联表
@@ -67,21 +56,8 @@ db.exec(`
     UNIQUE (note_id, tag_id)
   );
 
-  CREATE INDEX IF NOT EXISTS idx_notes_user       ON notes(user_id);
-  CREATE INDEX IF NOT EXISTS idx_tags_user        ON tags(user_id);
   CREATE INDEX IF NOT EXISTS idx_note_tags_note   ON note_tags(note_id);
   CREATE INDEX IF NOT EXISTS idx_note_tags_tag    ON note_tags(tag_id);
 `);
-
-// 兼容旧数据库：已存在的 notes 表自动补充新列
-function ensureColumn(table, column, definition) {
-  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
-  if (!cols.some((c) => c.name === column)) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-    console.log(`[db] notes 表已补充字段: ${column}`);
-  }
-}
-ensureColumn('notes', 'color', 'TEXT');
-ensureColumn('notes', 'font_key', "TEXT NOT NULL DEFAULT 'default'");
 
 module.exports = db;

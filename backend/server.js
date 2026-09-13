@@ -7,7 +7,6 @@ const cors = require('cors');
 // 初始化数据库（启动时自动建表，首次运行会生成 backend/db/database.db）
 require('./db/init');
 
-const authRoutes = require('./routes/auth');
 const notesRoutes = require('./routes/notes');
 const tagsRoutes = require('./routes/tags');
 
@@ -18,7 +17,6 @@ app.use(cors());
 app.use(express.json());
 
 // ---- API 路由 ----
-app.use('/api/auth', authRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/tags', tagsRoutes);
 

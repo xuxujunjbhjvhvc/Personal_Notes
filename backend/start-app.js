@@ -33,12 +33,12 @@ function findFreePort(start) {
   require('./server.js');
 
   // 等服务就绪后打开默认浏览器
-  const url = `http://127.0.0.1:${PORT}/login.html`;
+  const url = `http://127.0.0.1:${PORT}/index.html`;
   const http = require('http');
   const { exec } = require('child_process');
 
   const tryOpen = () => {
-    const req = http.get({ host: '127.0.0.1', port: PORT, path: '/login.html' }, (res) => {
+    const req = http.get({ host: '127.0.0.1', port: PORT, path: '/index.html' }, (res) => {
       console.log(`[app] 正在打开浏览器: ${url}`);
       exec(`start "" "${url}"`);
     });
