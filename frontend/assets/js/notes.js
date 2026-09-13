@@ -188,15 +188,20 @@
       }
     }
 
-    // 渲染侧栏标签
+    // 渲染侧栏标签（含重命名、删除操作，悬停显示）
     function renderTags(tags) {
       tagListEl.innerHTML = '';
       tags.forEach((tag) => {
-        const btn = document.createElement('button');
-        btn.className = 'tag-item' + (currentTag === tag.name ? ' active' : '');
-        btn.dataset.tag = tag.name;
-        btn.innerHTML = `<span>${esc(tag.name)}</span><span class="tag-count">${tag.note_count}</span>`;
-        btn.addEventListener('click', () => {
+        const item = document.createElement('div');
+        item.className = 'tag-item' + (currentTag === tag.name ? ' active' : '');
+        item.dataset.tag = tag.name;
+
+        // 点击标签名筛选
+        const nameBtn = document.createElement('button');
+        nameBtn.type = 'button';
+        nameBtn.className = 'tag-name';
+        nameBtn.innerHTML = `<span class="tag-name-text">${esc(tag.name)}</span><span class="tag-count">${tag.note_count}</span>`;
+        nameBtn.addEventListener('click', () => {
           currentTag = currentTag === tag.name ? '' : tag.name;
           currentKeyword = '';
           searchInput.value = '';
@@ -205,7 +210,59 @@
           updateListTitle();
           loadNotes();
         });
-        tagListEl.appendChild(btn);
+
+        // 重命名
+        const renameBtn = document.createElement('button');
+        renameBtn.type = 'button';
+        renameBtn.className = 'tag-action';
+        renameBtn.title = '重命名标签';
+        renameBtn.textContent = '✎';
+        renameBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const newName = window.prompt('重命名标签', tag.name);
+          if (!newName || newName.trim() === tag.name) return;
+          try {
+            await API.updateTag(tag.id, newName.trim());
+            showToast('标签已重命名', 'success');
+            if (currentTag === tag.name) currentTag = newName.trim();
+            await Promise.all([loadTags(), loadNotes()]);
+          } catch (err) {
+            if (err.status === 401) return redirectToLogin();
+            showToast(err.message);
+          }
+        });
+
+        // 删除
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'tag-action tag-action-danger';
+        delBtn.title = '删除标签';
+        delBtn.textContent = '✕';
+        delBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!window.confirm(`确定删除标签「${tag.name}」吗？该标签会从所有笔记中移除。`)) return;
+          try {
+            await API.deleteTag(tag.id);
+            showToast('标签已删除', 'success');
+            if (currentTag === tag.name) {
+              currentTag = '';
+              updateListTitle();
+            }
+            await Promise.all([loadTags(), loadNotes()]);
+          } catch (err) {
+            if (err.status === 401) return redirectToLogin();
+            showToast(err.message);
+          }
+        });
+
+        const actions = document.createElement('span');
+        actions.className = 'tag-actions';
+        actions.appendChild(renameBtn);
+        actions.appendChild(delBtn);
+
+        item.appendChild(nameBtn);
+        item.appendChild(actions);
+        tagListEl.appendChild(item);
       });
     }
 

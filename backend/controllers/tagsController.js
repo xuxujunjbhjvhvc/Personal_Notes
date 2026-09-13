@@ -36,6 +36,27 @@ function createTag(req, res) {
   return ok(res, { id: info.lastInsertRowid, name, note_count: 0 }, '创建成功');
 }
 
+// 重命名标签（所有关联该标签的笔记自动生效）
+function renameTag(req, res) {
+  const tag = db
+    .prepare('SELECT id FROM tags WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.user.id);
+  if (!tag) return fail(res, 404, '标签不存在');
+
+  const name = String((req.body || {}).name || '').trim();
+  if (!name || name.length > 20) {
+    return fail(res, 400, '标签名不能为空且不超过 20 个字符');
+  }
+
+  const dup = db
+    .prepare('SELECT id FROM tags WHERE user_id = ? AND name = ? AND id != ?')
+    .get(req.user.id, name, tag.id);
+  if (dup) return fail(res, 409, '已存在同名标签');
+
+  db.prepare('UPDATE tags SET name = ? WHERE id = ?').run(name, tag.id);
+  return ok(res, { id: tag.id, name }, '重命名成功');
+}
+
 // 删除标签（同时解除该标签与所有笔记的关联）
 function deleteTag(req, res) {
   const tag = db
@@ -47,4 +68,4 @@ function deleteTag(req, res) {
   return ok(res, null, '删除成功');
 }
 
-module.exports = { listTags, createTag, deleteTag };
+module.exports = { listTags, createTag, renameTag, deleteTag };

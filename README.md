@@ -103,7 +103,8 @@ http://localhost:3000/login.html
 | DELETE | /api/notes/:id | 删除笔记 | 是 |
 | GET | /api/tags | 标签列表（含笔记数） | 是 |
 | POST | /api/tags | 新建标签 `{ name }` | 是 |
-| DELETE | /api/tags/:id | 删除标签 | 是 |
+| PUT | /api/tags/:id | 重命名标签 `{ name }`（自动同步到所有笔记） | 是 |
+| DELETE | /api/tags/:id | 删除标签（自动解除与笔记的关联） | 是 |
 
 ## 数据库表
 

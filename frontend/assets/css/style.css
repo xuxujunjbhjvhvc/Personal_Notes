@@ -286,16 +286,10 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--ink);
-  font-size: 14px;
-  font-family: inherit;
-  text-align: left;
   padding: 8px 12px;
   border-radius: 8px;
-  cursor: pointer;
   transition: background 0.12s ease;
   margin-bottom: 2px;
 }
@@ -309,9 +303,79 @@ textarea:focus {
   color: #fffdf8;
 }
 
+/* 标签名（点击筛选） */
+.tag-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tag-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tag-item .tag-count {
   font-size: 12px;
   opacity: 0.7;
+  flex-shrink: 0;
+}
+
+/* 标签行操作按钮（悬停才显示，不干扰视觉） */
+.tag-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.tag-item:hover .tag-actions {
+  opacity: 1;
+}
+
+.tag-action {
+  border: none;
+  background: transparent;
+  color: #b5ac9b;
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.tag-action:hover {
+  color: var(--accent-strong);
+  background: rgba(169, 113, 61, 0.14);
+}
+
+.tag-action-danger:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.tag-item.active .tag-action {
+  color: rgba(255, 253, 248, 0.75);
+}
+
+.tag-item.active .tag-action:hover {
+  color: #fffdf8;
+  background: rgba(255, 253, 248, 0.2);
 }
 
 .sidebar-add {
@@ -527,6 +591,10 @@ textarea:focus {
   }
 
   .note-card-actions {
+    opacity: 1;
+  }
+
+  .tag-actions {
     opacity: 1;
   }
 }

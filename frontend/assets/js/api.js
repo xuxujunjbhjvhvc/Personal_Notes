@@ -107,6 +107,10 @@ const API = {
     return this.post('/tags', { name });
   },
 
+  updateTag(id, name) {
+    return this.put(`/tags/${id}`, { name });
+  },
+
   deleteTag(id) {
     return this.del(`/tags/${id}`);
   },
