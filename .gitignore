@@ -1,0 +1,16 @@
+# 依赖
+node_modules/
+
+# 环境变量（含密钥，不入库）
+backend/.env
+
+# SQLite 数据库文件（本地数据，不入库）
+backend/db/database.db
+backend/db/database.db-journal
+backend/db/database.db-wal
+backend/db/database.db-shm
+
+# 日志与系统文件
+*.log
+.DS_Store
+Thumbs.db

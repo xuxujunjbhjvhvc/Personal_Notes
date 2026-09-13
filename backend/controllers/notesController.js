@@ -1,0 +1,137 @@
+const db = require('../db/init');
+const { ok, fail } = require('../utils/helper');
+
+// 查询某条笔记关联的标签
+function getNoteTags(noteId) {
+  return db
+    .prepare(
+      `SELECT t.id, t.name
+       FROM tags t
+       JOIN note_tags nt ON nt.tag_id = t.id
+       WHERE nt.note_id = ?
+       ORDER BY t.name`
+    )
+    .all(noteId);
+}
+
+// 查询单条笔记（带标签），不存在返回 null
+function fetchNote(userId, noteId) {
+  const note = db
+    .prepare('SELECT * FROM notes WHERE id = ? AND user_id = ?')
+    .get(noteId, userId);
+  if (!note) return null;
+  return { ...note, tags: getNoteTags(note.id) };
+}
+
+// 为笔记挂载标签：标签不存在则自动创建（同一用户下标签名唯一）
+function attachTags(userId, noteId, tags) {
+  const list = Array.isArray(tags)
+    ? [...new Set(tags.map((t) => String(t).trim()).filter(Boolean))]
+    : [];
+
+  const insertTag = db.prepare('INSERT OR IGNORE INTO tags (user_id, name) VALUES (?, ?)');
+  const findTag = db.prepare('SELECT id FROM tags WHERE user_id = ? AND name = ?');
+  const link = db.prepare('INSERT OR IGNORE INTO note_tags (note_id, tag_id) VALUES (?, ?)');
+
+  for (const name of list) {
+    insertTag.run(userId, name);
+    const tag = findTag.get(userId, name);
+    if (tag) link.run(noteId, tag.id);
+  }
+}
+
+// 笔记列表：支持 ?tag=标签名 过滤、?keyword=关键词 搜索
+function listNotes(req, res) {
+  const userId = req.user.id;
+  const { tag, keyword } = req.query;
+
+  let notes;
+  if (tag) {
+    notes = db
+      .prepare(
+        `SELECT DISTINCT n.*
+         FROM notes n
+         JOIN note_tags nt ON nt.note_id = n.id
+         JOIN tags t ON t.id = nt.tag_id
+         WHERE n.user_id = ? AND t.name = ?
+         ORDER BY n.updated_at DESC`
+      )
+      .all(userId, String(tag));
+  } else if (keyword && String(keyword).trim()) {
+    const like = `%${String(keyword).trim()}%`;
+    notes = db
+      .prepare(
+        `SELECT * FROM notes
+         WHERE user_id = ? AND (title LIKE ? OR content LIKE ?)
+         ORDER BY updated_at DESC`
+      )
+      .all(userId, like, like);
+  } else {
+    notes = db
+      .prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY updated_at DESC')
+      .all(userId);
+  }
+
+  const result = notes.map((n) => ({ ...n, tags: getNoteTags(n.id) }));
+  return ok(res, result);
+}
+
+// 单条笔记
+function getNote(req, res) {
+  const note = fetchNote(req.user.id, req.params.id);
+  if (!note) return fail(res, 404, '笔记不存在');
+  return ok(res, note);
+}
+
+// 新建笔记
+function createNote(req, res) {
+  const { title = '', content = '', tags = [] } = req.body || {};
+  const t = String(title).trim();
+  const c = String(content ?? '');
+
+  if (!t && !c) {
+    return fail(res, 400, '标题和内容不能同时为空');
+  }
+
+  const info = db
+    .prepare('INSERT INTO notes (user_id, title, content) VALUES (?, ?, ?)')
+    .run(req.user.id, t, c);
+  const noteId = info.lastInsertRowid;
+
+  attachTags(req.user.id, noteId, tags);
+  return ok(res, fetchNote(req.user.id, noteId), '创建成功');
+}
+
+// 更新笔记（字段缺省时保留原值；tags 传入时整体替换）
+function updateNote(req, res) {
+  const note = fetchNote(req.user.id, req.params.id);
+  if (!note) return fail(res, 404, '笔记不存在');
+
+  const { title, content, tags } = req.body || {};
+  const t = title === undefined ? note.title : String(title).trim();
+  const c = content === undefined ? note.content : String(content ?? '');
+
+  db.prepare(
+    `UPDATE notes
+     SET title = ?, content = ?, updated_at = datetime('now', 'localtime')
+     WHERE id = ?`
+  ).run(t, c, note.id);
+
+  if (tags !== undefined) {
+    db.prepare('DELETE FROM note_tags WHERE note_id = ?').run(note.id);
+    attachTags(req.user.id, note.id, tags);
+  }
+
+  return ok(res, fetchNote(req.user.id, note.id), '更新成功');
+}
+
+// 删除笔记
+function deleteNote(req, res) {
+  const note = fetchNote(req.user.id, req.params.id);
+  if (!note) return fail(res, 404, '笔记不存在');
+
+  db.prepare('DELETE FROM notes WHERE id = ?').run(note.id);
+  return ok(res, null, '删除成功');
+}
+
+module.exports = { listNotes, getNote, createNote, updateNote, deleteNote };

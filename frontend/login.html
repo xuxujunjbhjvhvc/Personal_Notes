@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录 · Personal Notes</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='12' height='16' x='2' fill='%23a9713d' rx='1'/%3E%3Cline x1='4' y1='4' x2='12' y2='4' stroke='%23fffdf8' stroke-width='1.5'/%3E%3Cline x1='4' y1='7' x2='12' y2='7' stroke='%23fffdf8' stroke-width='1.5'/%3E%3C/svg%3E" />
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <h1 class="auth-title">Personal Notes</h1>
+    <p class="auth-subtitle">记录你所有的碎片与灵感</p>
+
+    <form id="loginForm" class="auth-form">
+      <label>
+        用户名
+        <input type="text" id="username" name="username" autocomplete="username"
+               required minlength="2" maxlength="20" placeholder="2-20 个字符" />
+      </label>
+      <label>
+        密码
+        <input type="password" id="password" name="password" autocomplete="current-password"
+               required minlength="6" placeholder="至少 6 位" />
+      </label>
+      <button type="submit" class="btn btn-primary btn-block">登 录</button>
+    </form>
+
+    <p class="auth-switch">还没有账号？<a href="register.html">去注册</a></p>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+</body>
+</html>

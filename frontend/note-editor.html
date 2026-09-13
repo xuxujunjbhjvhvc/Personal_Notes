@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>编辑笔记 · Personal Notes</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='12' height='16' x='2' fill='%23a9713d' rx='1'/%3E%3Cline x1='4' y1='4' x2='12' y2='4' stroke='%23fffdf8' stroke-width='1.5'/%3E%3Cline x1='4' y1='7' x2='12' y2='7' stroke='%23fffdf8' stroke-width='1.5'/%3E%3C/svg%3E" />
+</head>
+<body class="app-page">
+  <header class="topbar">
+    <a class="brand" href="index.html">Personal Notes</a>
+    <div class="topbar-right">
+      <a class="btn btn-ghost btn-small" href="index.html">返回列表</a>
+    </div>
+  </header>
+
+  <main class="editor-wrap">
+    <form id="noteForm">
+      <input id="noteTitle" type="text" maxlength="100" placeholder="标题" autocomplete="off" />
+      <textarea id="noteContent" rows="16" placeholder="写点什么…"></textarea>
+      <div class="editor-tags">
+        <input id="noteTags" type="text" maxlength="100"
+               placeholder="标签，多个用英文逗号分隔，例如：灵感,工作" autocomplete="off" />
+      </div>
+      <div class="editor-actions">
+        <span id="editorHint" class="editor-hint"></span>
+        <button id="deleteBtn" type="button" class="btn btn-danger hidden">删除</button>
+        <button type="submit" class="btn btn-primary">保存</button>
+      </div>
+    </form>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/notes.js"></script>
+</body>
+</html>
