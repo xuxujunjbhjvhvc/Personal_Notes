@@ -15,6 +15,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@webviewjs/webview": "^0.1.4",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -27,7 +28,9 @@
     "assets": [
       ".env",
       "node_modules/better-sqlite3/prebuilds/win32-x64.node",
+      "node_modules/@webviewjs/webview-win32-x64-msvc/webview.win32-x64-msvc.node",
       "../frontend/**/*"
-    ]
+    ],
+    "scripts": ["./server.js"]
   }
 }

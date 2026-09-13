@@ -42,6 +42,7 @@
 | 前端 | 原生 HTML + CSS + JavaScript（无框架、无构建步骤） |
 | 后端 | Node.js + Express 4 |
 | 数据库 | SQLite（better-sqlite3 v13，NAPI 跨 Node 版本通用） |
+| 桌面窗口 | @webviewjs/webview（Rust 绑定，复用系统 WebView2，桌面版专用） |
 
 ---
 
@@ -52,10 +53,12 @@
 ### 使用方式
 
 1. 双击 `dist/PersonalNotes.exe`（或自行打包，见下）
-2. 程序自动启动本地服务并打开默认浏览器进入笔记列表页
+2. 程序自动启动本地服务并弹出**内置窗口**（WebView2，无浏览器地址栏），直接进入笔记列表页
 3. **无需注册登录**，直接开始记笔记
 4. 数据保存在 **exe 同目录 `db/database.db`**（退出程序、重启电脑数据不丢失）
+5. 关闭窗口即退出程序（后端服务同时停止）
 
+> 窗口使用系统自带的 WebView2（Edge 内核，Windows 10/11 自带），**不依赖外部浏览器、不捆绑完整 Chromium**。
 > 端口被占用时程序会自动顺延（3000 → 3001 → …），不影响使用。
 
 ### 重新打包 EXE
@@ -72,6 +75,8 @@ npm run build-exe    # 生成 ../dist/PersonalNotes.exe
   `https://github.com/yao-pkg/pkg-fetch/releases/download/v3.6/node-v24.18.1-win-x64`
   并重命名为 `fetched-v24.18.1-win-x64` 放入 `~/.pkg-cache/v3.6/`
 - better-sqlite3 为原生模块：运行时自动把内置的 `win32-x64.node` 释放到临时目录后加载（`db/init.js` 中处理）
+- 内置窗口使用 `@webviewjs/webview`（Rust 实现，基于系统 WebView2）：其原生 `.node` 与 better-sqlite3 一样，打包后由 `start-app.js` 在启动时释放到临时目录并通过 `NAPI_RS_NATIVE_LIBRARY_PATH` 加载
+- 后端（Express + SQLite）运行在 worker 线程中，主线程负责窗口；关闭窗口会自动终止后端并退出
 
 ---
 
@@ -98,10 +103,10 @@ npm start
 
 ```
 Personal Notes 服务已启动: http://localhost:3000
-前端页面: http://localhost:3000/login.html
+前端页面: http://localhost:3000/index.html
 ```
 
-浏览器打开 `http://localhost:3000/login.html`，注册账号即可使用。
+浏览器打开 `http://localhost:3000/index.html` 即可使用（桌面版无登录，直接进入笔记列表）。
 
 - 开发模式：`npm run dev`（Node 自带 watch，改代码自动重启）
 - 数据文件：`backend/db/database.db`（首次启动自动生成）
@@ -147,7 +152,7 @@ Personal_Notes/
 │   ├── .env                  # 环境变量（不入库）
 │   ├── .env.example          # 环境变量示例
 │   ├── server.js             # 服务入口（API + 托管前端静态文件）
-│   ├── start-app.js          # 桌面版入口（EXE 双击启动 + 自动开浏览器）
+│   ├── start-app.js          # 桌面版入口（worker 跑后端 + 内置 WebView 窗口）
 │   ├── db/
 │   │   ├── init.js           # 建表初始化
 │   │   └── database.db       # SQLite 数据文件（首次启动自动生成）
