@@ -31,34 +31,31 @@ function getNoteTags(noteId) {
 }
 
 // 查询单条笔记（带标签），不存在返回 null
-function fetchNote(userId, noteId) {
-  const note = db
-    .prepare('SELECT * FROM notes WHERE id = ? AND user_id = ?')
-    .get(noteId, userId);
+function fetchNote(noteId) {
+  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteId);
   if (!note) return null;
   return { ...note, tags: getNoteTags(note.id) };
 }
 
-// 为笔记挂载标签：标签不存在则自动创建（同一用户下标签名唯一）
-function attachTags(userId, noteId, tags) {
+// 为笔记挂载标签：标签不存在则自动创建
+function attachTags(noteId, tags) {
   const list = Array.isArray(tags)
     ? [...new Set(tags.map((t) => String(t).trim()).filter(Boolean))]
     : [];
 
-  const insertTag = db.prepare('INSERT OR IGNORE INTO tags (user_id, name) VALUES (?, ?)');
-  const findTag = db.prepare('SELECT id FROM tags WHERE user_id = ? AND name = ?');
+  const insertTag = db.prepare('INSERT OR IGNORE INTO tags (name) VALUES (?)');
+  const findTag = db.prepare('SELECT id FROM tags WHERE name = ?');
   const link = db.prepare('INSERT OR IGNORE INTO note_tags (note_id, tag_id) VALUES (?, ?)');
 
   for (const name of list) {
-    insertTag.run(userId, name);
-    const tag = findTag.get(userId, name);
+    insertTag.run(name);
+    const tag = findTag.get(name);
     if (tag) link.run(noteId, tag.id);
   }
 }
 
 // 笔记列表：支持 ?tag=标签名 过滤、?keyword=关键词 搜索
 function listNotes(req, res) {
-  const userId = req.user.id;
   const { tag, keyword } = req.query;
 
   let notes;
@@ -69,23 +66,21 @@ function listNotes(req, res) {
          FROM notes n
          JOIN note_tags nt ON nt.note_id = n.id
          JOIN tags t ON t.id = nt.tag_id
-         WHERE n.user_id = ? AND t.name = ?
+         WHERE t.name = ?
          ORDER BY n.updated_at DESC`
       )
-      .all(userId, String(tag));
+      .all(String(tag));
   } else if (keyword && String(keyword).trim()) {
     const like = `%${String(keyword).trim()}%`;
     notes = db
       .prepare(
         `SELECT * FROM notes
-         WHERE user_id = ? AND (title LIKE ? OR content LIKE ?)
+         WHERE title LIKE ? OR content LIKE ?
          ORDER BY updated_at DESC`
       )
-      .all(userId, like, like);
+      .all(like, like);
   } else {
-    notes = db
-      .prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY updated_at DESC')
-      .all(userId);
+    notes = db.prepare('SELECT * FROM notes ORDER BY updated_at DESC').all();
   }
 
   const result = notes.map((n) => ({ ...n, tags: getNoteTags(n.id) }));
@@ -94,7 +89,7 @@ function listNotes(req, res) {
 
 // 单条笔记
 function getNote(req, res) {
-  const note = fetchNote(req.user.id, req.params.id);
+  const note = fetchNote(req.params.id);
   if (!note) return fail(res, 404, '笔记不存在');
   return ok(res, note);
 }
@@ -110,17 +105,17 @@ function createNote(req, res) {
   }
 
   const info = db
-    .prepare('INSERT INTO notes (user_id, title, content, color, font_key) VALUES (?, ?, ?, ?, ?)')
-    .run(req.user.id, t, c, normalizeColor(color), normalizeFontKey(fontKey));
+    .prepare('INSERT INTO notes (title, content, color, font_key) VALUES (?, ?, ?, ?)')
+    .run(t, c, normalizeColor(color), normalizeFontKey(fontKey));
   const noteId = info.lastInsertRowid;
 
-  attachTags(req.user.id, noteId, tags);
-  return ok(res, fetchNote(req.user.id, noteId), '创建成功');
+  attachTags(noteId, tags);
+  return ok(res, fetchNote(noteId), '创建成功');
 }
 
 // 更新笔记（字段缺省时保留原值；tags 传入时整体替换）
 function updateNote(req, res) {
-  const note = fetchNote(req.user.id, req.params.id);
+  const note = fetchNote(req.params.id);
   if (!note) return fail(res, 404, '笔记不存在');
 
   const { title, content, tags, color, fontKey } = req.body || {};
@@ -137,15 +132,15 @@ function updateNote(req, res) {
 
   if (tags !== undefined) {
     db.prepare('DELETE FROM note_tags WHERE note_id = ?').run(note.id);
-    attachTags(req.user.id, note.id, tags);
+    attachTags(note.id, tags);
   }
 
-  return ok(res, fetchNote(req.user.id, note.id), '更新成功');
+  return ok(res, fetchNote(note.id), '更新成功');
 }
 
 // 删除笔记
 function deleteNote(req, res) {
-  const note = fetchNote(req.user.id, req.params.id);
+  const note = fetchNote(req.params.id);
   if (!note) return fail(res, 404, '笔记不存在');
 
   db.prepare('DELETE FROM notes WHERE id = ?').run(note.id);

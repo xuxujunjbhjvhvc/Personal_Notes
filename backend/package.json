@@ -1,11 +1,12 @@
 {
   "name": "personal-notes-backend",
   "version": "1.0.0",
-  "description": "个人笔记系统后端 API（Express + SQLite + JWT）",
-  "main": "server.js",
+  "description": "个人笔记系统后端 API（Express + SQLite + JWT），支持打包为桌面离线 EXE",
+  "main": "start-app.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "build-exe": "node build-base-icon.js && set PKG_NODE_PATH=%USERPROFILE%\\.pkg-cache\\v3.6\\fetched-v24.18.1-win-x64&& pkg start-app.js --targets node24-win-x64 --output ../dist/PersonalNotes.exe"
   },
   "keywords": [
     "notes",
@@ -14,11 +15,26 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "@webviewjs/webview": "^0.1.4",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2"
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.22.0",
+    "rcedit": "^5.0.1"
+  },
+  "pkg": {
+    "assets": [
+      ".env",
+      "node_modules/better-sqlite3/prebuilds/win32-x64.node",
+      "node_modules/@webviewjs/webview-win32-x64-msvc/webview.win32-x64-msvc.node",
+      "../frontend/**/*",
+      "assets/icon.ico"
+    ],
+    "scripts": [
+      "./server.js"
+    ]
   }
 }

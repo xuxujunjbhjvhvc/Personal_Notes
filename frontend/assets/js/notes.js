@@ -57,8 +57,6 @@
   // 编辑器页
   // =========================================================
   async function initEditor() {
-    if (!requireAuth()) return;
-
     const titleInput = document.getElementById('noteTitle');
     const contentInput = document.getElementById('noteContent');
     const tagsInput = document.getElementById('noteTags');
@@ -157,7 +155,6 @@
         syncPalette();
         applyStylePreview();
       } catch (err) {
-        if (err.status === 401) return redirectToLogin();
         showToast(err.message);
         hint.textContent = '加载失败';
       }
@@ -193,7 +190,6 @@
         }
         setTimeout(() => location.replace('index.html'), 400);
       } catch (err) {
-        if (err.status === 401) return redirectToLogin();
         showToast(err.message);
         btn.disabled = false;
         btn.textContent = '保存';
@@ -209,7 +205,6 @@
         showToast('已删除', 'success');
         setTimeout(() => location.replace('index.html'), 400);
       } catch (err) {
-        if (err.status === 401) return redirectToLogin();
         showToast(err.message);
       }
     });
@@ -219,28 +214,16 @@
   // 列表页
   // =========================================================
   async function initList() {
-    if (!requireAuth()) return;
-
     const noteListEl = document.getElementById('noteList');
     const emptyEl = document.getElementById('emptyState');
     const listTitle = document.getElementById('listTitle');
     const tagListEl = document.getElementById('tagList');
     const searchInput = document.getElementById('searchInput');
-    const userNameEl = document.getElementById('userName');
-    const logoutBtn = document.getElementById('logoutBtn');
     const newTagInput = document.getElementById('newTagInput');
     const addTagBtn = document.getElementById('addTagBtn');
 
     let currentTag = '';
     let currentKeyword = '';
-
-    // 顶部显示当前用户名；token 失效则回登录页
-    try {
-      const me = await API.me();
-      userNameEl.textContent = me.username;
-    } catch (err) {
-      return redirectToLogin();
-    }
 
     // 渲染笔记列表
     function renderNotes(notes) {
@@ -304,7 +287,6 @@
             showToast('已删除', 'success');
             await Promise.all([loadTags(), loadNotes()]);
           } catch (err) {
-            if (err.status === 401) return redirectToLogin();
             showToast(err.message);
           }
         });
@@ -319,7 +301,6 @@
         const notes = await API.listNotes({ tag: currentTag, keyword: currentKeyword });
         renderNotes(notes);
       } catch (err) {
-        if (err.status === 401) return redirectToLogin();
         showToast(err.message);
       }
     }
@@ -367,7 +348,6 @@
             if (currentTag === tag.name) currentTag = newName.trim();
             await Promise.all([loadTags(), loadNotes()]);
           } catch (err) {
-            if (err.status === 401) return redirectToLogin();
             showToast(err.message);
           }
         });
@@ -395,7 +375,6 @@
             }
             await Promise.all([loadTags(), loadNotes()]);
           } catch (err) {
-            if (err.status === 401) return redirectToLogin();
             showToast(err.message);
           }
         });
@@ -430,7 +409,6 @@
         renderTags(tags);
         syncActiveTag();
       } catch (err) {
-        if (err.status === 401) return redirectToLogin();
         showToast(err.message);
       }
     }
@@ -458,7 +436,6 @@
         showToast('标签已创建', 'success');
         await loadTags();
       } catch (err) {
-        if (err.status === 401) return redirectToLogin();
         showToast(err.message);
       }
     }
@@ -469,12 +446,6 @@
         e.preventDefault();
         addTag();
       }
-    });
-
-    // 退出登录
-    logoutBtn.addEventListener('click', () => {
-      API.clearToken();
-      location.replace('login.html');
     });
 
     // 初始加载

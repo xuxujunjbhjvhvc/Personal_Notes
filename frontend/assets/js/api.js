@@ -1,33 +1,20 @@
 // =========================================================
-// API 请求封装：统一处理鉴权、错误提示、JSON 序列化
+// API 请求封装：统一错误提示、JSON 序列化
 // 后端与前端同源部署（Express 托管），直接使用相对路径 /api
+// 桌面离线版：单用户，无登录鉴权
 // =========================================================
 
 const API = {
   base: '/api',
 
-  getToken() {
-    return localStorage.getItem('pn_token');
-  },
-
-  setToken(token) {
-    localStorage.setItem('pn_token', token);
-  },
-
-  clearToken() {
-    localStorage.removeItem('pn_token');
-  },
-
   async request(path, options = {}) {
     const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-    const token = this.getToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
 
     let res;
     try {
       res = await fetch(this.base + path, { ...options, headers });
     } catch (err) {
-      throw new Error('无法连接服务器，请确认后端已启动');
+      throw new Error('无法连接服务器，请确认程序已启动');
     }
 
     const data = await res.json().catch(() => ({
@@ -58,19 +45,6 @@ const API = {
 
   del(path) {
     return this.request(path, { method: 'DELETE' });
-  },
-
-  // ---- 认证 ----
-  register(username, password) {
-    return this.post('/auth/register', { username, password });
-  },
-
-  login(username, password) {
-    return this.post('/auth/login', { username, password });
-  },
-
-  me() {
-    return this.get('/auth/me');
   },
 
   // ---- 笔记 ----
@@ -115,21 +89,6 @@ const API = {
     return this.del(`/tags/${id}`);
   },
 };
-
-// 未登录跳转登录页；返回是否已登录
-function requireAuth() {
-  if (!API.getToken()) {
-    location.href = 'login.html';
-    return false;
-  }
-  return true;
-}
-
-// 登录态失效：清空 token 并跳转登录页
-function redirectToLogin() {
-  API.clearToken();
-  location.href = 'login.html';
-}
 
 // 轻量提示条（页面中需有 #toast 元素）
 function showToast(message, type = 'error') {

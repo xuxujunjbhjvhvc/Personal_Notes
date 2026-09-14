@@ -14,3 +14,6 @@ backend/db/database.db-shm
 *.log
 .DS_Store
 Thumbs.db
+
+# 打包产物（EXE 体积大，不入库）
+dist/
