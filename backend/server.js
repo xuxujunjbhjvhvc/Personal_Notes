@@ -9,6 +9,8 @@ require('./db/init');
 
 const notesRoutes = require('./routes/notes');
 const tagsRoutes = require('./routes/tags');
+const statsRoutes = require('./routes/stats');
+const exportRoutes = require('./routes/export');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +21,8 @@ app.use(express.json());
 // ---- API 路由 ----
 app.use('/api/notes', notesRoutes);
 app.use('/api/tags', tagsRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/export', exportRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

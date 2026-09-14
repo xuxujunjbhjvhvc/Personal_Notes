@@ -41,6 +41,46 @@
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
   }
 
+  // 解析 Markdown 文件（支持本应用导出的 frontmatter 格式，也兼容普通 .md）
+  function parseMarkdownFile(text, filename) {
+    let meta = {};
+    let body = String(text).replace(/^\uFEFF/, '');
+    const fm = body.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+    if (fm) {
+      fm[1].split(/\r?\n/).forEach((line) => {
+        const m = line.match(/^([A-Za-z]+):\s*(.*)$/);
+        if (m) meta[m[1].toLowerCase()] = m[2].trim().replace(/^"|"$/g, '');
+      });
+      body = body.slice(fm[0].length).replace(/^\s*\r?\n/, '');
+    }
+    let title = meta.title || '';
+    let content = body.trim();
+    if (!title) {
+      const h = content.match(/^#\s+(.+?)\s*$/m);
+      if (h) {
+        title = h[1].trim();
+        content = content.replace(h[0], '').trim();
+      }
+    }
+    if (!title) {
+      title =
+        String(filename)
+          .replace(/\.md$/i, '')
+          .replace(/^[\d_\-]+\s*/, '') || '导入的笔记';
+    }
+    const tags = meta.tags
+      ? String(meta.tags)
+          .split(/[,，]/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+    const color = /^#[0-9a-fA-F]{3,6}$/.test(meta.color || '') ? meta.color : null;
+    const fontKey = ['default', 'song', 'kai', 'hei', 'yuan', 'fang'].includes(meta.font)
+      ? meta.font
+      : 'default';
+    return { title, content, tags, color, fontKey };
+  }
+
   // ---------- 编辑器页 ----------
   const noteForm = document.getElementById('noteForm');
   if (noteForm) {
@@ -221,6 +261,15 @@
     const searchInput = document.getElementById('searchInput');
     const newTagInput = document.getElementById('newTagInput');
     const addTagBtn = document.getElementById('addTagBtn');
+    const importBtn = document.getElementById('importBtn');
+    const importFile = document.getElementById('importFile');
+    const exportAllBtn = document.getElementById('exportAllBtn');
+    const statsPrev = document.getElementById('statsPrev');
+    const statsNext = document.getElementById('statsNext');
+    const statsMonthEl = document.getElementById('statsMonth');
+    const heatmapEl = document.getElementById('heatmap');
+    const statsCountEl = document.getElementById('statsCount');
+    const statsWordsEl = document.getElementById('statsWords');
 
     let currentTag = '';
     let currentKeyword = '';
@@ -249,6 +298,7 @@
           </div>
           <div class="note-card-actions">
             <button class="btn btn-small btn-ghost" data-action="edit">编辑</button>
+            <button class="btn btn-small btn-ghost" data-action="export">导出</button>
             <button class="btn btn-small btn-danger" data-action="delete">删除</button>
           </div>
         `;
@@ -276,6 +326,17 @@
 
         card.querySelector('[data-action="edit"]').addEventListener('click', () => {
           location.href = `note-editor.html?id=${note.id}`;
+        });
+
+        card.querySelector('[data-action="export"]').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          try {
+            const r = await API.exportNote(note.id);
+            const f = r.files && r.files[0];
+            showToast(f ? `已导出：${f.filename}` : '导出失败', 'success');
+          } catch (err) {
+            showToast(err.message);
+          }
         });
 
         card.querySelector('[data-action="delete"]').addEventListener('click', async (e) => {
@@ -447,6 +508,176 @@
         addTag();
       }
     });
+
+    // =====================================================
+    // 月度记录热力图（类似 GitHub 贡献图）
+    // =====================================================
+    const now = new Date();
+    let statYear = now.getFullYear();
+    let statMonth = now.getMonth() + 1; // 1-12
+
+    // 按笔记数映射格子深浅（0/1-2/3-5/6-9/10+）
+    function heatLevel(n) {
+      if (n <= 0) return 0;
+      if (n <= 2) return 1;
+      if (n <= 5) return 2;
+      if (n <= 9) return 3;
+      return 4;
+    }
+
+    async function loadStats() {
+      try {
+        const monthStr = `${statYear}-${String(statMonth).padStart(2, '0')}`;
+        const data = await API.calendarStats(monthStr);
+        renderHeatmap(data);
+      } catch (err) {
+        heatmapEl.innerHTML = `<span class="stats-error">${esc(err.message)}</span>`;
+      }
+    }
+
+    function renderHeatmap(data) {
+      statsMonthEl.textContent = `${data.year}年${data.month}月`;
+
+      const daysMap = new Map(data.days.map((d) => [d.date, d]));
+      let totalNotes = 0;
+      let totalWords = 0;
+      data.days.forEach((d) => {
+        totalNotes += d.notes;
+        totalWords += d.words;
+      });
+      statsCountEl.textContent = totalNotes;
+      statsWordsEl.textContent = totalWords.toLocaleString('zh-CN');
+
+      const first = new Date(data.year, data.month - 1, 1);
+      const last = new Date(data.year, data.month, 0);
+      const start = new Date(first);
+      start.setDate(1 - ((first.getDay() + 6) % 7)); // 当月1号所在周的周一
+      const end = new Date(last);
+      end.setDate(last.getDate() + (6 - ((last.getDay() + 6) % 7))); // 当月最后一天所在周的周日
+
+      const WEEK = ['一', '二', '三', '四', '五', '六', '日'];
+      const cols = [];
+      let col = [];
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        col.push(new Date(d));
+        if (col.length === 7) {
+          cols.push(col);
+          col = [];
+        }
+      }
+      if (col.length) cols.push(col);
+
+      const pad = (n) => String(n).padStart(2, '0');
+      heatmapEl.innerHTML = '';
+      const grid = document.createElement('div');
+      grid.className = 'heatmap-grid';
+
+      // 星期标签列
+      const weekLabel = document.createElement('div');
+      weekLabel.className = 'heatmap-week';
+      WEEK.forEach((w, i) => {
+        // 只显示部分行标签（第2、5行），避免拥挤
+        const lab = document.createElement('span');
+        lab.textContent = i === 1 || i === 4 ? w : '';
+        weekLabel.appendChild(lab);
+      });
+      heatmapEl.appendChild(weekLabel);
+
+      cols.forEach((weekDays) => {
+        const colEl = document.createElement('div');
+        colEl.className = 'heatmap-col';
+        for (let i = 0; i < 7; i++) {
+          const day = weekDays[i];
+          const cell = document.createElement('span');
+          cell.className = 'heatmap-cell';
+          if (!day) {
+            colEl.appendChild(cell);
+            continue;
+          }
+          const inMonth = day.getMonth() === data.month - 1;
+          if (!inMonth) {
+            cell.classList.add('outside');
+            colEl.appendChild(cell);
+            continue;
+          }
+          const dateStr = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+          const info = daysMap.get(dateStr);
+          const n = info ? info.notes : 0;
+          const w = info ? info.words : 0;
+          cell.classList.add('lvl' + heatLevel(n));
+          cell.title = `${data.month}月${day.getDate()}日 · ${n} 篇 · ${w.toLocaleString('zh-CN')} 字`;
+          colEl.appendChild(cell);
+        }
+        grid.appendChild(colEl);
+      });
+      heatmapEl.appendChild(grid);
+    }
+
+    if (statsPrev && statsNext) {
+      statsPrev.addEventListener('click', () => {
+        statMonth -= 1;
+        if (statMonth < 1) {
+          statMonth = 12;
+          statYear -= 1;
+        }
+        loadStats();
+      });
+      statsNext.addEventListener('click', () => {
+        statMonth += 1;
+        if (statMonth > 12) {
+          statMonth = 1;
+          statYear += 1;
+        }
+        loadStats();
+      });
+    }
+    loadStats();
+
+    // =====================================================
+    // Markdown 导入 / 导出全部
+    // =====================================================
+    if (importBtn && importFile) {
+      importBtn.addEventListener('click', () => importFile.click());
+      importFile.addEventListener('change', async () => {
+        const files = Array.from(importFile.files || []);
+        if (!files.length) return;
+        let ok = 0;
+        let fail = 0;
+        for (const file of files) {
+          try {
+            const text = await file.text();
+            const parsed = parseMarkdownFile(text, file.name);
+            await API.createNote(parsed);
+            ok += 1;
+          } catch (err) {
+            fail += 1;
+            console.error('导入失败:', file.name, err);
+          }
+        }
+        importFile.value = '';
+        if (ok) {
+          showToast(`成功导入 ${ok} 篇笔记${fail ? `，${fail} 篇失败` : ''}`, 'success');
+          await Promise.all([loadTags(), loadNotes(), loadStats()]);
+        } else {
+          showToast(`导入失败 ${fail} 篇，请检查文件格式`);
+        }
+      });
+    }
+
+    if (exportAllBtn) {
+      exportAllBtn.addEventListener('click', async () => {
+        try {
+          const r = await API.exportAll();
+          if (!r.count) {
+            showToast('没有可导出的笔记');
+            return;
+          }
+          showToast(`已导出 ${r.count} 篇 → 保存到程序旁的 exports 文件夹`, 'success');
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    }
 
     // 初始加载
     loadTags();

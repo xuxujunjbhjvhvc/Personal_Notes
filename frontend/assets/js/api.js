@@ -88,6 +88,20 @@ const API = {
   deleteTag(id) {
     return this.del(`/tags/${id}`);
   },
+
+  // ---- 统计 ----
+  calendarStats(month) {
+    return this.get(`/stats/calendar?month=${encodeURIComponent(month)}`);
+  },
+
+  // ---- Markdown 导出 ----
+  exportNote(id) {
+    return this.post('/export', { id });
+  },
+
+  exportAll() {
+    return this.post('/export', { all: true });
+  },
 };
 
 // 轻量提示条（页面中需有 #toast 元素）

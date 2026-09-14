@@ -26,12 +26,35 @@
         <input id="newTagInput" type="text" maxlength="20" placeholder="新建标签…" />
         <button id="addTagBtn" class="btn btn-small btn-ghost">添加</button>
       </div>
+
+      <div class="sidebar-title">月度记录</div>
+      <div class="stats-card">
+        <div class="stats-head">
+          <button id="statsPrev" class="stats-nav" title="上一月" aria-label="上一月">‹</button>
+          <span id="statsMonth" class="stats-month">—</span>
+          <button id="statsNext" class="stats-nav" title="下一月" aria-label="下一月">›</button>
+        </div>
+        <div id="heatmap" class="heatmap"></div>
+        <div class="stats-summary">
+          <span>本月 <b id="statsCount">0</b> 篇 · <b id="statsWords">0</b> 字</span>
+        </div>
+        <div class="heatmap-legend">
+          <span>少</span>
+          <i class="lvl lvl0"></i><i class="lvl lvl1"></i><i class="lvl lvl2"></i><i class="lvl lvl3"></i><i class="lvl lvl4"></i>
+          <span>多</span>
+        </div>
+      </div>
     </aside>
 
     <main class="main">
       <div class="main-head">
         <h2 id="listTitle">全部笔记</h2>
-        <a class="btn btn-primary" href="note-editor.html">写新笔记</a>
+        <div class="main-head-actions">
+          <input id="importFile" type="file" accept=".md,.markdown,text/markdown" multiple class="hidden" />
+          <button id="importBtn" class="btn btn-ghost btn-small" title="导入 Markdown 文件">导入</button>
+          <button id="exportAllBtn" class="btn btn-ghost btn-small" title="全部导出为 Markdown">导出全部</button>
+          <a class="btn btn-primary" href="note-editor.html">写新笔记</a>
+        </div>
       </div>
       <div id="noteList" class="note-list"></div>
       <div id="emptyState" class="empty-state hidden">

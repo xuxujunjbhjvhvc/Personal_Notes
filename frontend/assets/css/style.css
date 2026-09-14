@@ -172,6 +172,7 @@ textarea:focus {
   z-index: 100;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   max-width: 80vw;
+  word-break: break-all;
 }
 
 .toast.show {
@@ -417,6 +418,132 @@ textarea:focus {
   padding: 7px 10px;
 }
 
+/* ---------- 侧栏：月度记录热力图（GitHub 贡献图风格） ---------- */
+.stats-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 12px 10px;
+  box-shadow: var(--shadow);
+}
+
+.stats-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.stats-month {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.stats-nav {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.stats-nav:hover {
+  background: rgba(169, 113, 61, 0.12);
+  color: var(--accent-strong);
+}
+
+.heatmap {
+  display: flex;
+  gap: 6px;
+}
+
+.heatmap-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 2px;
+}
+
+.heatmap-week span {
+  width: 12px;
+  height: 12px;
+  font-size: 9px;
+  line-height: 12px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.heatmap-grid {
+  display: flex;
+  gap: 3px;
+}
+
+.heatmap-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.heatmap-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: transparent;
+}
+
+.heatmap-cell.outside {
+  background: transparent;
+}
+
+.heatmap-cell.lvl0 { background: var(--border); }
+.heatmap-cell.lvl1 { background: #b9e6b4; }
+.heatmap-cell.lvl2 { background: #74cf8a; }
+.heatmap-cell.lvl3 { background: #3da45c; }
+.heatmap-cell.lvl4 { background: #1f6e3a; }
+
+body.dark .heatmap-cell.lvl0 { background: #3a352c; }
+body.dark .heatmap-cell.lvl1 { background: #175a33; }
+body.dark .heatmap-cell.lvl2 { background: #0f7a3f; }
+body.dark .heatmap-cell.lvl3 { background: #26a641; }
+body.dark .heatmap-cell.lvl4 { background: #39d353; }
+
+.stats-summary {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.stats-summary b {
+  color: var(--accent-strong);
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--ink-soft);
+}
+
+.heatmap-legend .lvl {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.stats-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
 /* ---------- 主区：笔记列表 ---------- */
 .main {
   flex: 1;
@@ -434,6 +561,12 @@ textarea:focus {
   font-family: var(--font-title);
   font-size: 22px;
   font-weight: 600;
+}
+
+.main-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .note-list {

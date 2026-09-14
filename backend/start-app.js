@@ -14,8 +14,12 @@ require.resolve('cors');
 require.resolve('better-sqlite3');
 require.resolve('./routes/notes');
 require.resolve('./routes/tags');
+require.resolve('./routes/stats');
+require.resolve('./routes/export');
 require.resolve('./controllers/notesController');
 require.resolve('./controllers/tagsController');
+require.resolve('./controllers/statsController');
+require.resolve('./controllers/exportController');
 require.resolve('./db/init');
 require.resolve('./utils/helper');
 
@@ -26,7 +30,9 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 process.env.DB_PATH = process.env.DB_PATH || path.join(dataDir, 'database.db');
+process.env.EXPORT_DIR = process.env.EXPORT_DIR || path.join(appDir, 'exports');
 console.log(`[app] 数据文件: ${process.env.DB_PATH}`);
+console.log(`[app] 导出目录: ${process.env.EXPORT_DIR}`);
 
 // ---- pkg 打包环境下，原生模块无法从虚拟文件系统 dlopen：
 //      把 .node 复制到真实磁盘，并通过 NAPI_RS_NATIVE_LIBRARY_PATH 交给加载器 ----
