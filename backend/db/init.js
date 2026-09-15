@@ -38,6 +38,8 @@ db.exec(`
     content    TEXT    NOT NULL DEFAULT '',
     color      TEXT,
     font_key   TEXT    NOT NULL DEFAULT 'default',
+    enc        INTEGER NOT NULL DEFAULT 0,
+    content_len INTEGER NOT NULL DEFAULT 0,
     created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
     updated_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
   );
@@ -58,6 +60,31 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_note_tags_note   ON note_tags(note_id);
   CREATE INDEX IF NOT EXISTS idx_note_tags_tag    ON note_tags(tag_id);
+
+  -- 应用设置表（存储加密密钥参数等）
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `);
+
+// ---- 老库迁移：补充 enc / content_len 列 ----
+const noteCols = db.prepare('PRAGMA table_info(notes)').all().map((c) => c.name);
+if (!noteCols.includes('enc')) {
+  db.exec('ALTER TABLE notes ADD COLUMN enc INTEGER NOT NULL DEFAULT 0');
+}
+if (!noteCols.includes('content_len')) {
+  db.exec('ALTER TABLE notes ADD COLUMN content_len INTEGER NOT NULL DEFAULT 0');
+}
+
+// ---- 明文阶段补算历史笔记字数（仅当尚未开启加密时；加密后密文无法用 SQL 重算）----
+const hasSalt = !!db.prepare("SELECT value FROM settings WHERE key = 'cipher_salt'").get();
+if (!hasSalt) {
+  db.prepare(
+    `UPDATE notes
+     SET content_len = LENGTH(content)
+     WHERE content_len = 0 AND content != ''`
+  ).run();
+}
 
 module.exports = db;

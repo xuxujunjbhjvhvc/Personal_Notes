@@ -11,6 +11,8 @@ const notesRoutes = require('./routes/notes');
 const tagsRoutes = require('./routes/tags');
 const statsRoutes = require('./routes/stats');
 const exportRoutes = require('./routes/export');
+const securityRoutes = require('./routes/security');
+const crypto = require('./utils/crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,11 +20,21 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// ---- 加密锁中间件：已开启加密但未解锁时，除安全接口外一律 423 ----
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/security') || req.path === '/health') return next();
+  if (crypto.isLocked()) {
+    return res.status(423).json({ code: 423, message: '笔记已加密，请先解锁', data: null });
+  }
+  next();
+});
+
 // ---- API 路由 ----
 app.use('/api/notes', notesRoutes);
 app.use('/api/tags', tagsRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/security', securityRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

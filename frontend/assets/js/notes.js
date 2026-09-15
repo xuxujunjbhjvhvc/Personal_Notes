@@ -84,13 +84,17 @@
   // ---------- 编辑器页 ----------
   const noteForm = document.getElementById('noteForm');
   if (noteForm) {
-    initEditor();
+    ensureUnlocked()
+      .then(() => initEditor())
+      .catch(() => {});
     return;
   }
 
   // ---------- 列表页 ----------
   if (document.getElementById('noteList')) {
-    initList();
+    ensureUnlocked()
+      .then(() => initList())
+      .catch(() => {});
   }
 
   // =========================================================
@@ -270,6 +274,7 @@
     const heatmapEl = document.getElementById('heatmap');
     const statsCountEl = document.getElementById('statsCount');
     const statsWordsEl = document.getElementById('statsWords');
+    const settingsBtn = document.getElementById('settingsBtn');
 
     let currentTag = '';
     let currentKeyword = '';
@@ -677,6 +682,118 @@
           showToast(err.message);
         }
       });
+    }
+
+    // =====================================================
+    // 安全设置（加密开/关、改密）
+    // =====================================================
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', openSecurityDialog);
+    }
+
+    async function openSecurityDialog() {
+      let status;
+      try {
+        status = await API.securityStatus();
+      } catch (err) {
+        showToast(err.message);
+        return;
+      }
+
+      const overlay = document.createElement('div');
+      overlay.className = 'dialog-overlay';
+      overlay.innerHTML = `
+        <div class="dialog" role="dialog" aria-modal="true">
+          <div class="dialog-title">安全设置</div>
+          <div class="dialog-message" id="secStatusLine"></div>
+          <div class="dialog-actions" id="secActions"></div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      const statusLine = overlay.querySelector('#secStatusLine');
+      const actionsEl = overlay.querySelector('#secActions');
+
+      function close() {
+        overlay.remove();
+      }
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) close();
+      });
+
+      statusLine.textContent = status.enabled
+        ? '当前状态：已开启加密。重启程序后需输入密码解锁，忘记密码将无法恢复数据。'
+        : '当前状态：未开启加密，笔记以明文保存。';
+
+      function addBtn(text, style, handler) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `btn ${style}`;
+        b.textContent = text;
+        b.addEventListener('click', handler);
+        actionsEl.appendChild(b);
+      }
+
+      if (!status.enabled) {
+        addBtn('开启加密', 'btn-primary', async () => {
+          const pwd = await showPromptPassword('设置密码', '设置后所有笔记将以加密形式保存');
+          if (!pwd) return;
+          if (pwd.length < 4) {
+            showToast('密码至少 4 位');
+            return;
+          }
+          const confirm = await showPromptPassword('确认密码', '请再次输入相同密码');
+          if (!confirm) return;
+          if (pwd !== confirm) {
+            showToast('两次输入的密码不一致');
+            return;
+          }
+          try {
+            await API.setupPassword(pwd);
+            showToast('已开启加密，历史笔记已加密保存', 'success');
+            close();
+            setTimeout(() => location.reload(), 600);
+          } catch (err) {
+            showToast(err.message);
+          }
+        });
+      } else {
+        addBtn('修改密码', 'btn-primary', async () => {
+          const oldPwd = await showPromptPassword('原密码', '请输入当前密码');
+          if (!oldPwd) return;
+          const newPwd = await showPromptPassword('新密码', '至少 4 位');
+          if (!newPwd) return;
+          if (newPwd.length < 4) {
+            showToast('密码至少 4 位');
+            return;
+          }
+          const confirm = await showPromptPassword('确认新密码', '请再次输入相同密码');
+          if (!confirm) return;
+          if (newPwd !== confirm) {
+            showToast('两次输入的密码不一致');
+            return;
+          }
+          try {
+            await API.changePassword(oldPwd, newPwd);
+            showToast('密码已修改', 'success');
+            close();
+          } catch (err) {
+            showToast(err.message);
+          }
+        });
+        addBtn('关闭加密', 'btn-danger', async () => {
+          const pwd = await showPromptPassword('关闭加密', '输入密码确认，笔记将恢复明文保存');
+          if (!pwd) return;
+          try {
+            await API.disableEncryption(pwd);
+            showToast('已关闭加密，笔记恢复明文保存', 'success');
+            close();
+            setTimeout(() => location.reload(), 600);
+          } catch (err) {
+            showToast(err.message);
+          }
+        });
+      }
+      addBtn('关闭', 'btn-ghost', close);
     }
 
     // 初始加载

@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('../db/init');
 const { ok, fail } = require('../utils/helper');
+const crypto = require('../utils/crypto');
 
 // 导出目录：优先环境变量（start-app.js 设置为 exe 同目录 exports），开发模式为 backend/exports
 const EXPORT_DIR = process.env.EXPORT_DIR || path.join(__dirname, '..', 'exports');
@@ -83,7 +84,8 @@ function exportNotes(req, res) {
 
   const files = [];
   for (const note of notes) {
-    const full = { ...note, tags: getNoteTags(note.id) };
+    const decrypted = crypto.decryptIfNeeded(note);
+    const full = { ...decrypted, tags: getNoteTags(note.id) };
     const title = sanitizeFilename(full.title || `未命名-${full.id}`);
     const filename = `${timePrefix()}_${title}.md`;
     const target = path.join(EXPORT_DIR, filename);

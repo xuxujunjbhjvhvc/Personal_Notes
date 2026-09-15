@@ -21,7 +21,7 @@ function calendarStats(req, res) {
     .prepare(
       `SELECT date(created_at) AS d,
               COUNT(*)        AS c,
-              SUM(LENGTH(content)) AS w
+              SUM(content_len) AS w
        FROM notes
        WHERE date(created_at) >= ? AND date(created_at) < ?
        GROUP BY d

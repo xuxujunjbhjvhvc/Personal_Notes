@@ -102,6 +102,27 @@ const API = {
   exportAll() {
     return this.post('/export', { all: true });
   },
+
+  // ---- 笔记加密 ----
+  securityStatus() {
+    return this.get('/security/status');
+  },
+
+  setupPassword(password) {
+    return this.post('/security/setup', { password });
+  },
+
+  unlockPassword(password) {
+    return this.post('/security/unlock', { password });
+  },
+
+  changePassword(oldPassword, newPassword) {
+    return this.post('/security/change', { oldPassword, newPassword });
+  },
+
+  disableEncryption(password) {
+    return this.post('/security/disable', { password });
+  },
 };
 
 // 轻量提示条（页面中需有 #toast 元素）
@@ -142,7 +163,7 @@ function formatTime(str) {
 //   - 输入模式 resolve 输入值；取消 resolve null
 //   - 确认模式 resolve true / null
 // =========================================================
-function openDialog({ title, message, value = '', confirmText = '确定', cancelText = '取消', showInput = false }) {
+function openDialog({ title, message, value = '', confirmText = '确定', cancelText = '取消', showInput = false, inputType = 'text' }) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.className = 'dialog-overlay';
@@ -150,7 +171,7 @@ function openDialog({ title, message, value = '', confirmText = '确定', cancel
       <div class="dialog" role="dialog" aria-modal="true">
         <div class="dialog-title">${esc(title)}</div>
         ${message ? `<div class="dialog-message">${esc(message)}</div>` : ''}
-        ${showInput ? `<input type="text" class="dialog-input" value="${esc(value)}" maxlength="20" />` : ''}
+        ${showInput ? `<input type="${esc(inputType)}" class="dialog-input" value="${esc(value)}" maxlength="20" />` : ''}
         <div class="dialog-actions">
           <button type="button" class="btn btn-ghost" data-dialog="cancel">${esc(cancelText)}</button>
           <button type="button" class="btn btn-primary" data-dialog="confirm">${esc(confirmText)}</button>
@@ -202,6 +223,66 @@ function showConfirm(message, title = '确认操作', confirmText = '确定') {
 // 输入框（返回 Promise<string|null>，取消为 null）
 function showPrompt(title, value = '', confirmText = '确定') {
   return openDialog({ title, value, confirmText, cancelText: '取消', showInput: true });
+}
+
+// 密码输入框（返回 Promise<string|null>，取消为 null）
+function showPromptPassword(title, message = '', confirmText = '确定') {
+  return openDialog({ title, message, confirmText, cancelText: '取消', showInput: true, inputType: 'password' });
+}
+
+// 页面加载前调用：若已开启加密且未解锁，显示解锁遮罩，解锁后 resolve
+async function ensureUnlocked() {
+  let s;
+  try {
+    s = await API.securityStatus();
+  } catch {
+    return true; // 状态查询失败时不阻塞（保持打开即用）
+  }
+  if (!s || !s.locked) return true;
+
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'dialog-overlay';
+    overlay.innerHTML = `
+      <div class="dialog unlock-card" role="dialog" aria-modal="true">
+        <div class="dialog-title">笔记已加密</div>
+        <div class="dialog-message">数据已加密保存，请输入密码解锁后继续使用。</div>
+        <input type="password" class="dialog-input" id="unlockInput" placeholder="输入密码" autocomplete="off" maxlength="64" />
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-primary" id="unlockBtn">解锁</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector('#unlockInput');
+    const btn = overlay.querySelector('#unlockBtn');
+    input.focus();
+
+    async function doUnlock() {
+      const pwd = input.value;
+      if (!pwd) {
+        showToast('请输入密码');
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await API.unlockPassword(pwd);
+        overlay.remove();
+        resolve(true);
+      } catch (err) {
+        showToast(err.message);
+        input.value = '';
+        input.focus();
+        btn.disabled = false;
+      }
+    }
+
+    btn.addEventListener('click', doUnlock);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doUnlock();
+    });
+  });
 }
 
 // =========================================================

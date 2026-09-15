@@ -16,10 +16,13 @@ require.resolve('./routes/notes');
 require.resolve('./routes/tags');
 require.resolve('./routes/stats');
 require.resolve('./routes/export');
+require.resolve('./routes/security');
 require.resolve('./controllers/notesController');
 require.resolve('./controllers/tagsController');
 require.resolve('./controllers/statsController');
 require.resolve('./controllers/exportController');
+require.resolve('./controllers/securityController');
+require.resolve('./utils/crypto');
 require.resolve('./db/init');
 require.resolve('./utils/helper');
 
