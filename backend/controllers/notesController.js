@@ -54,34 +54,34 @@ function attachTags(noteId, tags) {
   }
 }
 
-// 笔记列表：支持 ?tag=标签名 过滤、?keyword=关键词 搜索
+// 笔记列表：标签与关键词可单独使用，也可组合过滤
 function listNotes(req, res) {
   const { tag, keyword } = req.query;
+  const tagValue = tag == null ? '' : String(tag).trim();
+  const keywordValue = keyword == null ? '' : String(keyword).trim();
 
-  let notes;
-  if (tag) {
-    notes = db
-      .prepare(
-        `SELECT DISTINCT n.*
-         FROM notes n
-         JOIN note_tags nt ON nt.note_id = n.id
-         JOIN tags t ON t.id = nt.tag_id
-         WHERE t.name = ?
-         ORDER BY n.updated_at DESC`
-      )
-      .all(String(tag));
-  } else if (keyword && String(keyword).trim()) {
-    const like = `%${String(keyword).trim()}%`;
-    notes = db
-      .prepare(
-        `SELECT * FROM notes
-         WHERE title LIKE ? OR content LIKE ?
-         ORDER BY updated_at DESC`
-      )
-      .all(like, like);
-  } else {
-    notes = db.prepare('SELECT * FROM notes ORDER BY updated_at DESC').all();
+  const conditions = [];
+  const params = [];
+
+  if (tagValue) {
+    conditions.push(`EXISTS (
+      SELECT 1 FROM note_tags nt
+      JOIN tags t ON t.id = nt.tag_id
+      WHERE nt.note_id = n.id AND t.name = ?
+    )`);
+    params.push(tagValue);
   }
+
+  if (keywordValue) {
+    conditions.push('(n.title LIKE ? OR n.content LIKE ?)');
+    const like = `%${keywordValue}%`;
+    params.push(like, like);
+  }
+
+  const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
+  const notes = db.prepare(
+    `SELECT n.* FROM notes n${where} ORDER BY n.updated_at DESC`
+  ).all(...params);
 
   const result = notes.map((n) => ({ ...n, tags: getNoteTags(n.id) }));
   return ok(res, result);
