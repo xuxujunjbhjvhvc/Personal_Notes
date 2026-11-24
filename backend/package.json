@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build-exe": "node build-base-icon.js && set PKG_NODE_PATH=%USERPROFILE%\\.pkg-cache\\v3.6\\fetched-v24.18.1-win-x64&& pkg start-app.js --targets node24-win-x64 --output ../dist/PersonalNotes.exe"
+    "build-exe": "node build-base-icon.js && set PKG_NODE_PATH=%USERPROFILE%\\.pkg-cache\\v3.6\\fetched-v24.18.1-win-x64&& pkg start-app.js --targets node24-win-x64 --output ../dist/PersonalNotes.exe",
+    "test": "node --test"
   },
   "keywords": [
     "notes",
